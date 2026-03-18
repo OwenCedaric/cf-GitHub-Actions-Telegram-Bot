@@ -2,7 +2,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // GET /init: Automatically set Telegram Webhook
+    // GET /init: Automatically set Telegram Webhook and Register Commands
     if (request.method === "GET" && url.pathname === "/init") {
       return await handleInit(request, env);
     }
@@ -18,13 +18,20 @@ export default {
       }
 
       const chatId = update.message.chat.id;
-      const text = update.message.text;
+      let text = update.message.text;
       const userId = update.message.from.id.toString();
 
       // Authorization Check
       if (env.ALLOWED_USER_ID && userId !== env.ALLOWED_USER_ID) {
         await sendMessage(chatId, "Unauthorized user 🚫", env.TG_BOT_TOKEN);
         return new Response("OK");
+      }
+
+      // Handle shortcuts like /deploy_alias -> /deploy alias
+      if (text.startsWith("/deploy_")) {
+        const alias = text.split(" ")[0].replace("/deploy_", "");
+        const rest = text.split(" ").slice(1).join(" ");
+        text = `/deploy ${alias} ${rest}`.trim();
       }
 
       // /start command
@@ -47,18 +54,46 @@ export default {
 async function handleInit(request, env) {
   const url = new URL(request.url);
   const webhookUrl = `${url.protocol}//${url.host}/`;
-  const tgUrl = `https://api.telegram.org/bot${env.TG_BOT_TOKEN}/setWebhook?url=${encodeURIComponent(webhookUrl)}`;
   
-  try {
-    const response = await fetch(tgUrl);
-    const result = await response.json();
-    return new Response(JSON.stringify(result, null, 2), {
-      headers: { "Content-Type": "application/json" }
+  // 1. Set Webhook
+  const setWebhookUrl = `https://api.telegram.org/bot${env.TG_BOT_TOKEN}/setWebhook?url=${encodeURIComponent(webhookUrl)}`;
+  const webhookRes = await (await fetch(setWebhookUrl)).json();
+
+  // 2. Set Commands based on CONFIG_JSON
+  const config = parseConfig(env.CONFIG_JSON);
+  const commands = [
+    { command: "start", description: "Show help and usage" },
+    { command: "deploy", description: "Trigger a deployment: /deploy <alias|repo>" }
+  ];
+
+  if (config && config.github) {
+    config.github.forEach(account => {
+      (account.repos || []).forEach(repoInfo => {
+        if (typeof repoInfo === "object" && repoInfo.alias) {
+          // Telegram commands must be lowercase, digits, and underscores only
+          const sanitizedAlias = repoInfo.alias.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+          commands.push({
+            command: `deploy_${sanitizedAlias}`,
+            description: `Trigger ${account.owner}/${repoInfo.name}`
+          });
+        }
+      });
     });
-  } catch (e) {
-    return new Response(`Error: ${e.message}`, { status: 500 });
   }
+
+  const setCommandsUrl = `https://api.telegram.org/bot${env.TG_BOT_TOKEN}/setMyCommands`;
+  const commandsRes = await (await fetch(setCommandsUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ commands })
+  })).json();
+
+  return new Response(JSON.stringify({ webhook: webhookRes, commands: commandsRes }, null, 2), {
+    headers: { "Content-Type": "application/json" }
+  });
 }
+
+// ... (Rest of handleDeploy, parseConfig, resolveRepo, triggerAction, sendMessage remain the same)
 
 async function handleDeploy(chatId, text, env) {
   const parts = text.split(" ");
@@ -75,7 +110,6 @@ async function handleDeploy(chatId, text, env) {
   const resolved = resolveRepo(target, config);
 
   if (!resolved) {
-    // Fallback to environment variables for backward compatibility
     let owner, repo;
     if (target.includes("/")) {
       [owner, repo] = target.split("/");
@@ -97,7 +131,6 @@ async function handleDeploy(chatId, text, env) {
 
     await triggerAction(chatId, token, owner, repo, workflow, branch, env.TG_BOT_TOKEN);
   } else {
-    // Use resolved config
     const { owner, repo, github_token, default_workflow, default_branch } = resolved;
     workflow = parts[2] || default_workflow || workflow;
     branch = parts[3] || default_branch || branch;
@@ -128,7 +161,12 @@ function resolveRepo(target, config) {
       const alias = isObject ? repoInfo.alias : null;
       const fullPath = `${account.owner}/${repoName}`;
 
-      if (target === alias || target === fullPath || (target === repoName && !target.includes("/"))) {
+      // Case-insensitive matching for alias
+      const matchAlias = alias && target.toLowerCase() === alias.toLowerCase();
+      const matchPath = target.toLowerCase() === fullPath.toLowerCase();
+      const matchName = !target.includes("/") && target.toLowerCase() === repoName.toLowerCase();
+
+      if (matchAlias || matchPath || matchName) {
         return {
           owner: account.owner,
           repo: repoName,

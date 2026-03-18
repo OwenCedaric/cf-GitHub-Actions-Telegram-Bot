@@ -50,19 +50,14 @@ npx wrangler secret put ALLOWED_USER_ID
 npm run deploy
 ```
 
-### 3. Register Webhook (Initialization)
-
-After deployment, visit your worker's initialization URL in your browser to automatically set the webhook:
-
+### 3. Register Webhook & Commands
+Simply visit your worker's initialization URL in your browser:
 ```
 https://your-worker.workers.dev/init
 ```
-
-Alternatively, use `curl`:
-
-```bash
-curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://your-worker.workers.dev/"
-```
+This will automatically:
+1.  Connect your Telegram Bot to the Worker.
+2.  Register your **aliases** as shortcut commands in the Bot menu (e.g., `/deploy_web`).
 
 ## GitHub Actions Deployment (CI/CD)
 

@@ -50,13 +50,14 @@ npx wrangler secret put ALLOWED_USER_ID
 npm run deploy
 ```
 
-### 3. 设置 Webhook (初始化)
-
-部署完成后，在浏览器中访问 Worker 的初始化地址即可自动完成机器人设置：
-
+### 3. 设置 Webhook 与 菜单命令 (初始化)
+部署完成后，在浏览器中访问 Worker 的初始化地址：
 ```
 https://你的域名.workers.dev/init
 ```
+此操作将自动：
+1.  将 Telegram 机器人关联到 Worker。
+2.  将配置中的 **别名 (alias)** 注册为菜单快捷命令（例如 `/deploy_web`）。
 
 或者使用 `curl` 手动设置：
 
