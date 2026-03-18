@@ -1,0 +1,19 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Cloudflare Workers
+.wrangler/
+dist/
+.dev.vars
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project Specific
+config.json
+.env

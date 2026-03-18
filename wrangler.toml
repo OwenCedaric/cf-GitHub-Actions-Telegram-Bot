@@ -1,0 +1,14 @@
+name = "tg-gh-action-bot"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+# Required Secrets (Set via `wrangler secret put`):
+# TG_BOT_TOKEN = "..."
+# ALLOWED_USER_ID = "..."
+
+# Unified Configuration (JSON string)
+# CONFIG_JSON = '{"github": [{"github_token": "...", "owner": "...", "repos": [{"name": "repo", "alias": "web"}]}]}'
+
+# Fallback (optional)
+# GH_TOKEN = "..."
