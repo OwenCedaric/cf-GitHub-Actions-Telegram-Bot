@@ -74,7 +74,7 @@ async function handleInit(request, env) {
           const sanitizedAlias = repoInfo.alias.toLowerCase().replace(/[^a-z0-9_]/g, "_");
           commands.push({
             command: `deploy_${sanitizedAlias}`,
-            description: `Trigger ${account.owner}/${repoInfo.name}`
+            description: `Trigger ${repoInfo.name}` // Hidden owner
           });
         }
       });
@@ -183,7 +183,7 @@ function resolveRepo(target, config) {
 async function triggerAction(chatId, token, owner, repo, workflow, branch, tgToken) {
   await sendMessage(chatId, `🚀 Triggering GitHub Action...\nRepo: ${owner}/${repo}\nWorkflow: ${workflow}\nBranch: ${branch}`, tgToken);
 
-  const url = `https://api.telegram.org/repos/${owner}/${repo}/actions/workflows/${workflow}/dispatches`;
+  const url = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflow}/dispatches`;
   try {
     const response = await fetch(url, {
       method: "POST",
