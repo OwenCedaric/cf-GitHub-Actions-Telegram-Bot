@@ -34,7 +34,7 @@ npx wrangler secret put CONFIG_JSON
       "github_token": "ghp_your_token_1",
       "owner": "账号1",
       "repos": [
-        { "name": "项目A", "alias": "web", "workflow": "main.yml" },
+        { "name": "项目A", "alias": "web", "workflow": "main.yml", "branch": "main" },
         "项目B"
       ]
     }
